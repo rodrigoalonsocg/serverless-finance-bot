@@ -1,0 +1,237 @@
+{
+  "name": "Bot Finanzas Personales - Telegram + OpenAI + Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "ae6ba5e7-da12-495d-b686-a72a41d2c71b",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        3184,
+        368
+      ],
+      "webhookId": "1cd8fb83-034d-4d9c-a351-f33b60f6cf5c",
+      "credentials": {
+        "telegramApi": {
+          "id": "3YfpWzuP9kZHvRSY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0.2,\n  \"max_tokens\": 256,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres un extractor de datos financieros. El usuario enviará un texto. Extrae la información y responde ÚNICAMENTE con un JSON válido con esta estructura: {\\\"concepto\\\": \\\"texto\\\", \\\"monto\\\": numero, \\\"categoria\\\": \\\"comida/transporte/servicios/ocio/ingreso\\\", \\\"tipo\\\": \\\"gasto/ingreso\\\"}. No uses markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.message.text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "be1f7e03-df2e-4117-9ace-b441eb703c1d",
+      "name": "OpenAI - Extraer Datos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3488,
+        368
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "r1r2wPV2iLzM2Dhl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+"documentId": {
+          "__rl": true,
+          "value": "TU_SPREADSHEET_ID_AQUI",
+          "mode": "list",
+          "cachedResultName": "bot telegram",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/TU_SPREADSHEET_ID_AQUI/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/TU_SPREADSHEET_ID_AQUI/edit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "concepto": "={{ JSON.parse($json.choices[0].message.content).concepto }}",
+            "monto": "={{ JSON.parse($json.choices[0].message.content).monto }}",
+            "categoria": "={{ JSON.parse($json.choices[0].message.content).categoria }}",
+            "tipo": "={{ JSON.parse($json.choices[0].message.content).tipo }}",
+            "fecha": "={{ $now.toFormat('dd-MM-yy') }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "concepto",
+              "displayName": "concepto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monto",
+              "displayName": "monto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5c9a64aa-d965-4ac0-b23c-f0df179606e7",
+      "name": "Google Sheets - Registrar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3792,
+        368
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hC0p7JY84ybB5Kos",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ '✅ *Registro guardado*\\n\\n📌 *Concepto:* ' + JSON.parse($('OpenAI - Extraer Datos').item.json.choices[0].message.content).concepto + '\\n💰 *Monto:* S/' + JSON.parse($('OpenAI - Extraer Datos').item.json.choices[0].message.content).monto + '\\n🏷️ *Categoría:* ' + JSON.parse($('OpenAI - Extraer Datos').item.json.choices[0].message.content).categoria + '\\n📊 *Tipo:* ' + JSON.parse($('OpenAI - Extraer Datos').item.json.choices[0].message.content).tipo }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "561d3520-d14c-421c-ad24-21693ecf2b09",
+      "name": "Telegram - Confirmar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4096,
+        368
+      ],
+      "webhookId": "0738aeff-570a-407f-b520-868838f4919b",
+      "credentials": {
+        "telegramApi": {
+          "id": "3YfpWzuP9kZHvRSY",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Extraer Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Extraer Datos": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Registrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Registrar": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Confirmar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "307b749e-ac0a-46c0-9ec2-b7fa6b071348",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "58185166c00ac897a13c86da747bce14c8edf883c826bc3302ba2139f517b8f8"
+  },
+  "id": "prrGMAqBy6YVVXIe",
+  "tags": []
+}
