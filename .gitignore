@@ -1,0 +1,15 @@
+# Variables de entorno y secretos (NUNCA subir a GitHub)
+.env
+.env.*
+
+# Notas locales o tokens guardados temporalmente
+*.txt
+credentials.json
+keys.json
+
+# Archivos ocultos del sistema operativo
+.DS_Store
+
+# Archivos de prueba locales
+*.csv
+*.xlsx
